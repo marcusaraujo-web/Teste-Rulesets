@@ -1410,7 +1410,7 @@ rules:
 </div>
 
 <!-- ============ GUIDED TOUR ============ -->
-<button class="tour-fab" onclick="startTour()" title="Drag to reposition · Click to start"><svg class="tour-fab-grip" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg><span class="tour-fab-label">Take a tour</span></button>
+<button class="tour-fab" onclick="startTour()" title="Drag to reposition · Click to start" style="display:none"><svg class="tour-fab-grip" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg><span class="tour-fab-label">Take a tour</span></button>
 <div class="tour-overlay" id="tour-overlay">
   <div class="tour-spot" id="tour-spot"></div>
   <div class="tour-tip" id="tour-tip">
@@ -1436,7 +1436,7 @@ rules:
 
 <!-- ===== RESEARCH MODE (teste não moderado orientado a tarefas) ===== -->
 <style>
-.res-fab{position:fixed;left:22px;bottom:22px;z-index:70;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+.res-fab{position:fixed;right:22px;bottom:22px;z-index:70;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
   background:#1A1A22;color:#fff;border:none;border-radius:30px;padding:10px 16px;font-family:'Montserrat',sans-serif;font-size:13px;font-weight:600;
   box-shadow:0 6px 20px rgba(10,4,24,.28);transition:transform .15s,filter .15s}
 .res-fab:hover{filter:brightness(1.12);transform:translateY(-1px)}
@@ -1486,7 +1486,7 @@ rules:
 .res-miss.show{display:block}
 
 /* card de tarefa — flutuante, NÃO bloqueante */
-.res-task{position:fixed;left:22px;bottom:22px;z-index:90;width:400px;max-width:92vw;background:var(--surface);border-radius:14px;
+.res-task{position:fixed;right:22px;top:78px;z-index:90;width:380px;max-width:92vw;background:var(--surface);border-radius:14px;
   box-shadow:0 16px 40px rgba(10,4,24,.32);display:none;flex-direction:column;overflow:hidden;border:1px solid var(--surface-bdr)}
 .res-task.open{display:flex}
 .res-task-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;background:#1A1A22;color:#fff;cursor:grab;user-select:none}
@@ -1535,18 +1535,14 @@ rules:
 
 <div class="res-task" id="res-task">
   <div class="res-task-head" id="res-task-head">
-    <span><span class="tag" id="res-task-tag"></span><span class="opt" id="res-task-opt" style="display:none">OPCIONAL</span></span>
+    <span><span class="tag" id="res-task-tag"></span></span>
   </div>
   <div class="res-task-body">
     <p class="instr" id="res-task-instr"></p>
-    <details class="res-help" id="res-task-help">
-      <summary>Preciso de ajuda</summary>
-      <p id="res-task-help-text"></p>
-    </details>
   </div>
   <div class="res-task-foot">
     <button class="res-fail" onclick="finishTask(false)">Não consegui</button>
-    <button class="res-done" onclick="finishTask(true)">Concluí a tarefa</button>
+    <button class="res-done" onclick="finishTask(true)">Concluí</button>
   </div>
 </div>
 
@@ -3920,140 +3916,138 @@ goScreen('catalog'); // estado inicial + renderiza o breadcrumb dinâmico
    ============================================================ */
 
 // Tipos de pergunta: 'scale' (SEQ 1-7), 'single', 'multi', 'text', 'single' + why:true
+// liga/desliga a Tarefa 7 (recomendação automática) no fluxo da pesquisa
+const ENABLE_SMART_RECOMMENDATION_TASK = true;
+
+// perguntas-padrão exibidas DEPOIS de toda tarefa (sempre obrigatórias)
+const STANDARD_POST = [
+  {id:'ease', type:'scale', label:'Quão fácil foi concluir esta tarefa?', min:'Muito difícil', max:'Muito fácil'},
+  {id:'understanding', type:'text', label:'O que você entendeu sobre esta etapa?'},
+  {id:'confusion', type:'text', label:'O que ficou confuso, difícil ou inseguro?'}
+];
+
 const RESEARCH = {
   consent: {
-    title:'Antes de começar',
+    title:'Pesquisa de usabilidade',
     text:'Você vai testar um protótipo de uma nova funcionalidade de governança de APIs. '+
-      '<b>Não estamos testando você</b>; estamos testando a interface. Algumas partes podem não funcionar como um produto real. '+
-      'Complete as tarefas da forma mais natural possível e, sempre que puder, <b>pense em voz alta</b>. '+
-      'Ao final de cada tarefa, responda algumas perguntas rápidas sobre a experiência. '+
-      'Suas respostas e os caminhos percorridos são registrados de forma anônima para análise.'
+      'Queremos entender se a experiência está clara, fácil de usar e se as informações ajudam você a tomar decisões. '+
+      'O objetivo não é avaliar você, mas sim melhorar o produto.',
+    secondary:'Você fará algumas tarefas usando a interface livremente. Depois de cada tarefa, vamos fazer algumas perguntas rápidas sobre a experiência. Não existe resposta certa, queremos entender como você interpreta e usa o produto.'
   },
+  // group: 'profile' (participantProfile) ou 'pre' (preUnderstanding)
   profile: [
-    {id:'role', type:'single', label:'Qual é o seu papel principal?',
-     options:['API Product Manager','Developer','Security / Governance','Architect','Platform / Admin','Outro']},
-    {id:'familiarity', type:'single', label:'Qual a sua familiaridade com governança de APIs?',
+    {id:'role', group:'profile', type:'single', label:'Qual é seu papel principal?',
+     options:['API Product Manager','Developer','Security/Governance','Architect','Platform/Admin','Outro'],
+     follow:{when:['Outro'], id:'role_other', label:'Qual?', required:true}},
+    {id:'familiarity', group:'profile', type:'single', label:'Qual é sua familiaridade com governança de APIs?',
      options:['Nenhuma','Baixa','Média','Alta']},
-    {id:'spectral_exp', type:'single', label:'Você já trabalhou com regras de validação de contrato, Spectral, OWASP ou linting de APIs?',
-     options:['Sim, frequentemente','Sim, ocasionalmente','Já ouvi falar, mas usei pouco','Não']}
-  ],
-  intro: [
-    {title:'Três pilares', text:'O novo <b>Maturity Score</b> avalia suas APIs em três pilares: <b>Consistency</b>, <b>Security</b> e <b>Compliance</b>.'},
-    {title:'Rulesets', text:'<b>Rulesets</b> são conjuntos de regras que alimentam essa avaliação. Alguns já vêm prontos pela Sensedia; outros você pode criar.'},
-    {title:'Como funciona o teste', text:'Você fará algumas <b>tarefas</b> usando a interface livremente. Ao final de cada tarefa, responda uma pergunta rápida. Não há resposta certa — queremos entender como você pensa.'}
+    {id:'rules_exp', group:'profile', type:'single', label:'Você já trabalhou com regras de validação de contrato, Spectral, OWASP ou linting de APIs?',
+     options:['Sim, frequentemente','Sim, ocasionalmente','Já ouvi falar, mas usei pouco','Não']},
+    {id:'pre_ruleset', group:'pre', type:'text', label:'Antes de usar o protótipo, como você explicaria o que é um ruleset?'},
+    {id:'pre_api', group:'pre', type:'text', label:'Antes de usar o protótipo, o que você imagina que acontece quando um ruleset é associado ou aplicado a uma API?'}
   ],
   tasks: [
-    { id:'t1-score', tag:'Tarefa 1 de 7',
+    { id:'task_1_maturity_score', title:'Novo Maturity Score',
       screen:'settings-score',
       before:()=>{ setScoringModel('legacy'); var s=document.getElementById('v2-switch'); if(s){s.checked=false;onV2Toggle(false);} },
-      instruction:'Você precisa avaliar se vale a pena ativar o novo modelo de <b>Maturity Score</b> para sua organização. Encontre onde essa configuração fica e revise o impacto antes de tomar uma decisão.',
-      help:'A configuração do score fica em Settings · General. Ao ativar, o sistema mostra um preview e os impactos da mudança.',
-      post:[
-        {id:'seq', type:'scale', label:'Quão fácil foi entender a diferença entre o score legado e o novo Maturity Score?'},
-        {id:'understood', type:'text', label:'O que você entendeu que muda ao ativar o novo Maturity Score?'},
-        {id:'risky', type:'text', label:'O que, se algo, ficou confuso ou arriscado nessa ativação?', optional:true},
-        {id:'confident', type:'single', why:true, label:'Você se sentiria seguro para ativar essa mudança sozinho?',
-         options:['Sim','Talvez','Não']}
+      scenario:'Sua organização quer avaliar se deve usar o novo Maturity Score. Encontre onde essa configuração fica e revise o impacto da mudança.',
+      specific:[
+        {id:'t1_change', type:'text', label:'O que você entendeu que muda com o novo Maturity Score?'},
+        {id:'t1_safe', type:'single', label:'Você se sentiria seguro para ativar essa mudança em um ambiente real?',
+         options:['Sim','Talvez','Não'],
+         follow:{when:'*', id:'t1_safe_why', label:'Por quê?', required:true}}
       ]},
-    { id:'t2-managed', tag:'Tarefa 2 de 7',
+    { id:'task_2_managed_rulesets', title:'Rulesets da Sensedia',
       screen:'settings-rulesets',
       before:()=>{ setScoringModel('v2'); },
-      instruction:'Sua organização quer saber quais conjuntos de regras já vêm prontos pela Sensedia. Encontre essa informação e identifique quais estão ativos.',
-      help:'Em Settings · Rulesets a tabela lista os rulesets. Os gerenciados pela Sensedia têm um badge próprio e um status Ativo/Inativo.',
-      post:[
-        {id:'seq', type:'scale', label:'Quão claro ficou o que é um ruleset gerenciado pela Sensedia?'},
-        {id:'can_do', type:'multi', label:'O que você acha que pode fazer com um ruleset gerenciado?',
-         options:['Editar regras','Ativar / inativar','Excluir','Visualizar detalhes','Não sei']},
-        {id:'if_active', type:'text', label:'O que você acha que acontece se um ruleset gerenciado estiver ativo?'},
-        {id:'unclear_term', type:'text', label:'Algum termo ficou pouco claro? Qual?', optional:true}
+      scenario:'Sua organização quer saber quais regras já vêm prontas pela Sensedia. Encontre essas regras e identifique quais estão ativas.',
+      specific:[
+        {id:'t2_managed', type:'text', label:'O que você entendeu sobre os rulesets gerenciados pela Sensedia?'},
+        {id:'t2_can_do', type:'multi', label:'O que você entendeu que pode fazer com esse tipo de ruleset?',
+         options:['Visualizar','Ativar ou inativar','Editar regras','Excluir','Não sei']},
+        {id:'t2_unclear', type:'text', optional:true, label:'Algum termo usado nesta etapa ficou pouco claro? Qual?'}
       ]},
-    { id:'t3-create', tag:'Tarefa 3 de 7',
+    { id:'task_3_create_ruleset', title:'Criar um ruleset customizado',
       screen:'settings-rulesets',
       before:()=>{ setScoringModel('v2'); },
-      instruction:'Sua empresa precisa criar um conjunto de regras próprio para validar padrões internos de APIs. Crie um novo ruleset customizado do tipo <b>Consistency</b>.',
-      help:'Use o botão "+ Add ruleset". O cadastro acontece em um wizard de etapas; o tipo é escolhido na primeira etapa.',
-      post:[
-        {id:'seq', type:'scale', label:'Quão fácil foi começar a criação de um ruleset customizado?'},
-        {id:'type_choice', type:'text', label:'O que você entendeu sobre a escolha do tipo: Consistency, Security ou Compliance?'},
-        {id:'insecure', type:'single', why:true, label:'Em algum momento você ficou inseguro sobre o que preencher?',
-         options:['Sim','Não'], whyLabel:'Se sim, onde?'},
-        {id:'wizard_len', type:'single', label:'O wizard pareceu:',
-         options:['Curto demais','Adequado','Longo demais','Confuso']}
+      scenario:'Sua empresa precisa criar um conjunto de regras próprio para validar padrões internos de APIs. Crie um novo ruleset customizado de Consistency.',
+      specific:[
+        {id:'t3_types', type:'text', label:'O que você entendeu sobre a escolha entre Consistency, Security e Compliance?'},
+        {id:'t3_insecure', type:'single', label:'Em algum momento você ficou inseguro sobre o que preencher?',
+         options:['Sim','Não'],
+         follow:{when:['Sim'], id:'t3_insecure_where', label:'Onde você ficou inseguro?', required:true}},
+        {id:'t3_clearer', type:'text', optional:true, label:'O que poderia deixar essa etapa mais clara?'}
       ]},
-    { id:'t4-rules', tag:'Tarefa 4 de 7',
+    { id:'task_4_edit_rules', title:'Criar ou editar regras',
       screen:'rulesets-wizard',
       before:()=>{ openRsWizard(); rsWizardGoto(2); },
-      instruction:'Agora adicione uma regra para validar APIs. Você pode escrever diretamente no editor ou usar a ajuda por AI, se achar necessário.',
-      help:'A etapa "Ruleset definition" tem um editor YAML (Spectral) e um assistente de AI. Há validação estrutural antes de avançar.',
-      post:[
-        {id:'seq', type:'scale', label:'Quão fácil foi entender como criar ou modificar as regras?'},
-        {id:'preferred', type:'single', label:'Qual opção você preferiu?',
-         options:['Escrever / editar diretamente','Usar AI','Não ficou claro','Não consegui concluir']},
-        {id:'editor', type:'single', label:'O editor YAML pareceu:',
-         options:['Claro','Técnico, mas compreensível','Técnico demais','Confuso']},
-        {id:'expect', type:'text', label:'O que você esperaria ver para se sentir mais seguro ao criar uma regra?', optional:true},
-        {id:'validation', type:'single', label:'A validação estrutural ajudou você a entender se a regra estava correta?',
-         options:['Sim','Parcialmente','Não','Não percebi a validação']}
+      scenario:'Agora adicione uma regra ao ruleset. Você pode usar o editor ou a ajuda por AI, se achar necessário.',
+      specific:[
+        {id:'t4_howto', type:'text', label:'O que você entendeu sobre como criar ou editar uma regra?'},
+        {id:'t4_useful', type:'single', label:'Qual opção pareceu mais útil para criar a regra?',
+         options:['Editor','Ajuda por AI','As duas','Nenhuma','Não ficou claro']},
+        {id:'t4_validation', type:'single', label:'A validação ajudou você a entender se a regra estava correta?',
+         options:['Sim','Parcialmente','Não','Não percebi a validação']},
+        {id:'t4_missing', type:'text', optional:true, label:'O que faltou para você se sentir mais seguro ao criar regras?'}
       ]},
-    { id:'t5-impact', tag:'Tarefa 5 de 7',
+    { id:'task_5_api_impact', title:'Entender impacto nas APIs',
       screen:'rulesets-wizard',
       before:()=>{ openRsWizard(); rsWizardGoto(3); },
-      instruction:'Antes de salvar o ruleset, descubra <b>quais APIs serão impactadas</b> e como o score pode mudar.',
-      help:'As últimas etapas do wizard mostram a revisão das regras e um preview de impacto em APIs de amostra. Salvar um ruleset ativo dispara reprocessamento.',
-      post:[
-        {id:'seq', type:'scale', label:'Quão claro ficou quais APIs seriam afetadas por esse ruleset?'},
-        {id:'assoc', type:'single', label:'Você entendeu como um ruleset se associa às APIs?',
-         options:['Sim, claramente','Parcialmente','Não']},
-        {id:'scope', type:'single', label:'Na sua percepção, esse ruleset será aplicado:',
+      scenario:'Antes de salvar o ruleset, descubra quais APIs podem ser impactadas e como o score pode mudar.',
+      specific:[
+        {id:'t5_relation', type:'text', label:'O que você entendeu sobre como um ruleset se relaciona com as APIs?'},
+        {id:'t5_scope', type:'single', label:'Na sua percepção, esse ruleset será aplicado a quais APIs?',
          options:['A todas as APIs elegíveis','Apenas às APIs selecionadas','Apenas a uma API específica','Não sei']},
-        {id:'preview_enough', type:'single', why:true, label:'O preview de impacto foi suficiente para decidir se você salvaria o ruleset?',
-         options:['Sim','Parcialmente','Não'], whyLabel:'O que faltou?'}
+        {id:'t5_preview', type:'single', label:'O preview de impacto foi suficiente para ajudar na decisão?',
+         options:['Sim','Parcialmente','Não','Não encontrei o preview'],
+         follow:{when:['Parcialmente','Não','Não encontrei o preview'], id:'t5_preview_missing', label:'O que faltou no preview de impacto?', required:true}}
       ]},
-    { id:'t6-violation', tag:'Tarefa 6 de 7',
+    { id:'task_6_analyze_violation', title:'Analisar uma violação',
       screen:'catalog',
       before:()=>{ setScoringModel('v2'); },
-      instruction:'Uma API apresentou problemas de <b>Security</b>. Abra essa API e descubra qual é o problema mais grave e onde ele aparece no contrato.',
-      help:'No catálogo (Discovery), abra uma API e veja a aba Documentation. Os cards por pilar e a lista de violations mostram severidade, regra, linha e path.',
-      post:[
-        {id:'seq', type:'scale', label:'Quão fácil foi encontrar a violação mais relevante?'},
-        {id:'enough', type:'single', label:'As informações da violação foram suficientes para entender o problema?',
-         options:['Sim','Parcialmente','Não']},
-        {id:'helped', type:'multi', label:'O que ajudou mais?',
-         options:['Severidade','Mensagem','Linha / range','Path / operação','Trecho do contrato','Card por pilar','Outro']},
-        {id:'missing', type:'text', label:'O que faltou para você saber o que fazer depois?', optional:true}
+      scenario:'Uma API apresentou problemas de Security. Abra essa API e descubra qual é o problema mais relevante e onde ele aparece no contrato.',
+      specific:[
+        {id:'t6_enough', type:'single', label:'As informações foram suficientes para entender o problema?',
+         options:['Sim','Parcialmente','Não'],
+         follow:{when:'*', id:'t6_enough_why', label:'Por quê?', required:true}},
+        {id:'t6_helped', type:'multi', label:'O que mais ajudou você a localizar a violação?',
+         options:['Severidade','Mensagem','Linha ou range','Path ou operação','Trecho do contrato','Card por pilar','Filtros','Outro'],
+         follow:{when:['Outro'], id:'t6_helped_other', label:'Qual?', required:true}},
+        {id:'t6_next', type:'text', optional:true, label:'O que faltou para saber o que fazer depois?'}
       ]},
-    { id:'t7-smart', tag:'Tarefa 7 de 7', optional:true,
+    { id:'task_7_smart_recommendation', title:'Recomendação automática', optionalTask:true,
       screen:'detail',
       before:()=>{ setScoringModel('v2'); if(typeof openApiDetail==='function'){ try{openApiDetail(0);}catch(e){} } setPillar('security'); },
-      instruction:'Você quer reduzir as violações encontradas nessa API. Procure uma forma de obter uma <b>recomendação automática</b> e entenda o que será alterado.',
-      help:'Procure a ação de Smart Recommendation na análise da API. Ela gera um contrato corrigido derivado, sem alterar o original.',
-      post:[
-        {id:'seq', type:'scale', label:'Quão claro ficou o que a Smart Recommendation faz?'},
-        {id:'auto', type:'single', label:'Você entendeu se a correção é aplicada automaticamente ou se precisa ser revisada?',
-         options:['Sim','Parcialmente','Não']},
-        {id:'trust', type:'single', why:true, label:'Você confiaria nessa recomendação para alterar um contrato real?',
-         options:['Sim','Talvez','Não']}
+      scenario:'Você quer reduzir as violações encontradas nessa API. Procure uma forma de obter uma recomendação automática e entenda o que será alterado.',
+      specific:[
+        {id:'t7_does', type:'text', label:'O que você entendeu sobre o que a recomendação automática faz?'},
+        {id:'t7_auto', type:'single', label:'Você entendeu se a correção é aplicada automaticamente ou se precisa ser revisada?',
+         options:['É aplicada automaticamente','Precisa ser revisada antes','Não sei']},
+        {id:'t7_trust', type:'single', label:'Você confiaria nessa recomendação em um cenário real?',
+         options:['Sim','Talvez','Não'],
+         follow:{when:'*', id:'t7_trust_why', label:'Por quê?', required:true}}
       ]}
   ],
   final: [
-    {id:'f-explain-ruleset', type:'text', label:'Em uma frase, como você explicaria o que é um ruleset neste produto?'},
-    {id:'f-ruleset-score', type:'text', label:'O que você entendeu sobre a relação entre rulesets e Maturity Score?'},
-    {id:'f-ruleset-api', type:'text', label:'O que você entendeu sobre a relação entre rulesets e APIs?'},
-    {id:'f-easiest', type:'single', label:'Qual parte foi mais fácil?',
-     options:['Ativar o novo score','Entender rulesets managed','Criar ruleset custom','Criar / editar regras','Ver impacto nas APIs','Analisar violations','Usar Smart Recommendation']},
-    {id:'f-hardest', type:'text', label:'Qual parte foi mais difícil?'},
-    {id:'f-change', type:'text', label:'O que você mudaria para tornar essa feature mais fácil de usar?', optional:true},
-    {id:'f-conf-create', type:'scale', label:'Quão confiante você se sentiria para criar um ruleset real depois dessa experiência?'},
-    {id:'f-clear-impact', type:'scale', label:'Quão claro ficou quando uma regra passa a impactar uma API?'},
-    {id:'f-clear-legacy', type:'scale', label:'Quão claro ficou o que acontece ao sair do modelo legado para o novo Maturity Score?'},
-    {id:'f-would-use', type:'single', why:true, label:'Você usaria essa funcionalidade no seu trabalho?',
-     options:['Sim','Talvez','Não']}
+    {id:'f_explain', type:'text', label:'Agora, como você explicaria o que é um ruleset neste produto?'},
+    {id:'f_relation', type:'text', label:'O que você entendeu sobre a relação entre rulesets, APIs e Maturity Score?'},
+    {id:'f_easiest', type:'single', label:'Qual parte foi mais fácil?',
+     options:['Entender o novo Maturity Score','Entender rulesets gerenciados','Criar um ruleset customizado','Criar ou editar regras','Entender impacto nas APIs','Analisar violações','Usar recomendação automática','Nenhuma']},
+    {id:'f_hardest', type:'single', label:'Qual parte foi mais difícil?',
+     options:['Entender o novo Maturity Score','Entender rulesets gerenciados','Criar um ruleset customizado','Criar ou editar regras','Entender impacto nas APIs','Analisar violações','Usar recomendação automática','Nenhuma']},
+    {id:'f_change', type:'text', label:'O que você mudaria para tornar essa experiência mais clara?'},
+    {id:'f_conf', type:'scale', label:'Quão confiante você se sentiria para criar um ruleset real depois desse teste?', min:'Nada confiante', max:'Muito confiante'},
+    {id:'f_clear_impact', type:'scale', label:'Quão claro ficou o impacto de um ruleset nas APIs?', min:'Nada claro', max:'Muito claro'},
+    {id:'f_clear_migration', type:'scale', label:'Quão claro ficou o que acontece ao migrar do modelo legado para o novo Maturity Score?', min:'Nada claro', max:'Muito claro'},
+    {id:'f_comments', type:'text', optional:true, label:'Há mais algum comentário sobre a experiência?'}
   ]
 };
 
+// tarefas ativas no fluxo (respeita o toggle da Tarefa 7)
+const ACTIVE_TASKS = RESEARCH.tasks.filter(t => !t.optionalTask || ENABLE_SMART_RECOMMENDATION_TASK);
+
 // >>> COLE AQUI a URL do Web App do Google Apps Script (deploy "Anyone"). Vazio = só export manual/local.
 const RESEARCH_ENDPOINT = '';
-const RES_LS_KEY = 'ag_research_session';
 
 const RES = { active:false, phase:null, taskIdx:0, introIdx:0, profile:{}, results:[], events:[], t0:0, taskT0:0, sessionId:null, submit:'idle' };
 
@@ -4063,6 +4057,7 @@ function startResearch(){
   RES.profile={}; RES.results=[]; RES.events=[]; RES.t0=Date.now();
   RES.sessionId = 's-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
   RES.submit='idle';
+  const fab=document.querySelector('.res-fab'); if(fab) fab.style.display='none';
   resLog('research_start',{}); resPersist();
   renderConsent();
 }
@@ -4070,6 +4065,7 @@ function resAbort(){
   RES.active=false; RES.phase=null;
   document.getElementById('res-overlay').classList.remove('open');
   document.getElementById('res-task').classList.remove('open');
+  const fab=document.querySelector('.res-fab'); if(fab) fab.style.display='';
 }
 
 /* ---------- modal helpers ---------- */
@@ -4085,11 +4081,12 @@ function resSetProgress(pct){ resModal().bar.style.width = Math.max(0,Math.min(1
 function renderConsent(){
   RES.phase='consent'; resOpenModal();
   const m=resModal();
-  m.kicker.textContent='Consentimento';
+  m.kicker.textContent='Bem-vindo';
   m.title.textContent=RESEARCH.consent.title;
-  m.body.innerHTML='<p class="lead">'+RESEARCH.consent.text+'</p>';
-  m.sec.textContent='Sair'; m.sec.style.visibility='visible';
-  m.prim.textContent='Concordo e quero começar';
+  m.body.innerHTML='<p class="lead">'+RESEARCH.consent.text+'</p>'+
+    '<p class="lead" style="margin-top:-4px">'+RESEARCH.consent.secondary+'</p>';
+  m.sec.style.visibility='hidden';
+  m.prim.textContent='Começar pesquisa';
   resSetProgress(4);
 }
 
@@ -4106,53 +4103,49 @@ function renderProfile(){
   resSetProgress(8);
 }
 
-/* ---------- intro ---------- */
-function renderIntro(){
-  RES.phase='intro'; resOpenModal();
-  const m=resModal(); const it=RESEARCH.intro[RES.introIdx];
-  m.kicker.textContent='Contexto · '+(RES.introIdx+1)+' de '+RESEARCH.intro.length;
-  m.title.textContent=it.title;
-  m.body.innerHTML='<p class="lead">'+it.text+'</p>';
-  m.sec.textContent='Voltar'; m.sec.style.visibility='visible';
-  m.prim.textContent = RES.introIdx===RESEARCH.intro.length-1 ? 'Começar as tarefas' : 'Próximo';
-  resSetProgress(8 + (RES.introIdx+1)/RESEARCH.intro.length*10);
-}
-
 /* ---------- tasks ---------- */
+function resTaskTag(i){ return 'Tarefa '+(i+1)+' de '+ACTIVE_TASKS.length; }
+function resActiveScreen(){ const s=document.querySelector('.screen.active'); return s?s.id.replace('screen-',''):''; }
 function startTask(i){
   RES.taskIdx=i; RES.phase='task';
-  const t=RESEARCH.tasks[i];
+  const t=ACTIVE_TASKS[i];
   document.getElementById('res-overlay').classList.remove('open');
   if(t.screen) goScreen(t.screen);
   if(t.before){ try{ t.before(); }catch(e){} }
-  document.getElementById('res-task-tag').textContent=t.tag;
-  document.getElementById('res-task-opt').style.display = t.optional ? '' : 'none';
-  document.getElementById('res-task-instr').innerHTML=t.instruction;
-  document.getElementById('res-task-help-text').textContent=t.help||'';
-  document.getElementById('res-task-help').open=false;
+  document.getElementById('res-task-tag').textContent=resTaskTag(i);
+  document.getElementById('res-task-instr').innerHTML=t.scenario;
   document.getElementById('res-task').classList.add('open');
   RES.taskT0=Date.now();
   resLog('task_start',{id:t.id, screen:t.screen});
 }
 function finishTask(success){
-  const t=RESEARCH.tasks[RES.taskIdx];
-  RES._pendingTask={ id:t.id, tag:t.tag, success:success, timeMs:Date.now()-RES.taskT0 };
-  resLog('task_'+(success?'done':'fail'),{id:t.id, timeMs:RES._pendingTask.timeMs});
+  const t=ACTIVE_TASKS[RES.taskIdx], now=Date.now();
+  RES._pendingTask={
+    taskId:t.id, taskTitle:t.title,
+    status: success?'completed':'failed',
+    startedAt:new Date(RES.taskT0).toISOString(),
+    finishedAt:new Date(now).toISOString(),
+    timeOnTaskSeconds:Math.round((now-RES.taskT0)/1000),
+    screenAtCompletion:resActiveScreen()
+  };
+  resLog('task_'+(success?'completed':'failed'),{id:t.id, timeOnTaskSeconds:RES._pendingTask.timeOnTaskSeconds});
   renderPostQuestions();
 }
 function renderPostQuestions(){
   RES.phase='postq';
-  const t=RESEARCH.tasks[RES.taskIdx];
+  const t=ACTIVE_TASKS[RES.taskIdx];
+  RES._postQs = STANDARD_POST.concat(t.specific);
   resOpenModal();
   const m=resModal();
-  m.kicker.textContent=t.tag+' · pós-tarefa';
-  m.title.textContent= RES._pendingTask.success ? 'Como foi essa tarefa?' : 'Tudo bem — conte o que aconteceu';
-  m.body.innerHTML=t.post.map(q=>resQuestionHTML(q)).join('');
-  resBindQuestions(m.body, t.post);
+  m.kicker.textContent=resTaskTag(RES.taskIdx)+' · pós-tarefa';
+  m.title.textContent='Resposta registrada';
+  m.body.innerHTML='<p class="lead" style="margin-bottom:18px">Responda as perguntas abaixo para seguir.</p>'+
+    RES._postQs.map(q=>resQuestionHTML(q)).join('');
+  resBindQuestions(m.body, RES._postQs);
   m.sec.style.visibility='hidden';
-  const last = RES.taskIdx===RESEARCH.tasks.length-1;
-  m.prim.textContent= last ? 'Ir para as perguntas finais' : 'Próxima tarefa';
-  resSetProgress(18 + (RES.taskIdx+1)/RESEARCH.tasks.length*68);
+  const last = RES.taskIdx===ACTIVE_TASKS.length-1;
+  m.prim.textContent= last ? 'Ir para as perguntas finais' : 'Ir para a próxima tarefa';
+  resSetProgress(18 + (RES.taskIdx+1)/ACTIVE_TASKS.length*68);
 }
 
 /* ---------- final ---------- */
@@ -4173,18 +4166,21 @@ function renderResults(){
   RES.phase='done'; resOpenModal();
   const m=resModal();
   m.kicker.textContent='Concluído';
-  m.title.textContent='Obrigado! Pesquisa finalizada';
-  const rows=RES.results.map(r=>{
-    const seq=(r.answers&&r.answers.seq)?r.answers.seq:'—';
-    const st=r.success?'<span class="ok">Concluiu</span>':'<span class="no">Não concluiu</span>';
-    return '<tr><td>'+r.tag+'</td><td>'+st+'</td><td>'+(r.timeMs/1000).toFixed(0)+'s</td><td>'+seq+'</td></tr>';
+  m.title.textContent='Pesquisa finalizada';
+  const rows=RES.results.map((r,i)=>{
+    const ease=(r.responses&&r.responses.ease)?r.responses.ease:'—';
+    const st=r.status==='completed'?'<span class="ok">Concluiu</span>':'<span class="no">Não concluiu</span>';
+    return '<tr><td>'+r.taskTitle+'</td><td>'+st+'</td><td>'+r.timeOnTaskSeconds+'s</td><td>'+ease+'</td></tr>';
   }).join('');
-  m.body.innerHTML='<p class="lead">Suas respostas foram registradas.</p>'+
+  m.body.innerHTML='<p class="lead">Obrigado por participar. Suas respostas ajudam a melhorar a experiência do produto.</p>'+
     '<p id="res-submit-status" style="font-size:13px;color:var(--muted);min-height:18px;margin:0 0 14px 0"></p>'+
-    '<table class="res-summary"><thead><tr><th>Tarefa</th><th>Status</th><th>Tempo</th><th>SEQ</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-    '<button class="res-btn res-btn--outline" id="res-retry" style="display:none;margin-top:6px" onclick="resSubmitRemote()">Reenviar para a planilha</button>';
+    '<table class="res-summary"><thead><tr><th>Tarefa</th><th>Status</th><th>Tempo</th><th>Facilidade</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+
+      '<button class="res-btn res-btn--outline" onclick="resExport(\'csv\')">Baixar CSV</button>'+
+      '<button class="res-btn res-btn--outline" id="res-retry" style="display:none" onclick="resSubmitRemote()">Reenviar para a planilha</button>'+
+    '</div>';
   m.sec.textContent='Copiar JSON'; m.sec.style.visibility='visible';
-  m.prim.textContent='Baixar resultados (JSON)';
+  m.prim.textContent='Baixar JSON';
   resSetProgress(100);
   resUpdateSubmitUI();
 }
@@ -4196,17 +4192,12 @@ function resPrimary(){
     case 'consent': renderProfile(); break;
     case 'profile': {
       const r=resCollect(m.body, RESEARCH.profile); if(r.missing) return;
-      RES.profile=r.answers; resPersist(); renderIntro(); break; }
-    case 'intro':
-      if(RES.introIdx<RESEARCH.intro.length-1){ RES.introIdx++; renderIntro(); }
-      else { resLog('tasks_begin',{}); startTask(0); }
-      break;
+      RES.profile=r.answers; resPersist(); resLog('tasks_begin',{}); startTask(0); break; }
     case 'postq': {
-      const t=RESEARCH.tasks[RES.taskIdx];
-      const r=resCollect(m.body, t.post); if(r.missing) return;
-      RES.results.push(Object.assign({}, RES._pendingTask, {answers:r.answers}));
+      const r=resCollect(m.body, RES._postQs); if(r.missing) return;
+      RES.results.push(Object.assign({}, RES._pendingTask, {responses:r.answers}));
       resPersist();
-      if(RES.taskIdx<RESEARCH.tasks.length-1) startTask(RES.taskIdx+1);
+      if(RES.taskIdx<ACTIVE_TASKS.length-1) startTask(RES.taskIdx+1);
       else renderFinal();
       break; }
     case 'final': {
@@ -4215,16 +4206,11 @@ function resPrimary(){
       resLog('research_end',{}); resPersist();
       renderResults(); resSubmitRemote();
       break; }
-    case 'done': resExport('download'); break;
+    case 'done': resExport('json'); break;
   }
 }
 function resSecondary(){
   switch(RES.phase){
-    case 'consent': resAbort(); break;
-    case 'profile': renderConsent(); break;
-    case 'intro':
-      if(RES.introIdx>0){ RES.introIdx--; renderIntro(); } else renderProfile();
-      break;
     case 'done': resExport('copy'); break;
   }
 }
@@ -4236,23 +4222,49 @@ function resQuestionHTML(q){
   if(q.type==='scale'){
     let btns=''; for(let i=1;i<=7;i++) btns+='<button type="button" class="res-scale-btn" data-val="'+i+'">'+i+'</button>';
     inner='<div class="res-scale" data-qid="'+q.id+'">'+btns+'</div>'+
-      '<div class="res-scale-ends"><span>Muito difícil</span><span>Muito fácil</span></div>';
+      '<div class="res-scale-ends"><span>'+(q.min||'Muito difícil')+'</span><span>'+(q.max||'Muito fácil')+'</span></div>';
   } else if(q.type==='single' || q.type==='multi'){
     const inp = q.type==='single'?'radio':'checkbox';
-    inner='<div class="res-opts" data-qid="'+q.id+'">'+q.options.map((o,k)=>
+    inner='<div class="res-opts" data-qid="'+q.id+'">'+q.options.map(o=>
       '<label class="res-opt"><input type="'+inp+'" name="'+q.id+'" value="'+o.replace(/"/g,'&quot;')+'"><span>'+o+'</span></label>'
     ).join('')+'</div>';
-    if(q.why){
-      inner+='<div class="res-why"><label>'+(q.whyLabel||'Por quê?')+'</label>'+
-        '<textarea class="res-text" data-why="'+q.id+'" rows="2"></textarea></div>';
-    }
   } else if(q.type==='text'){
     inner='<textarea class="res-text" data-qid="'+q.id+'" placeholder="Sua resposta..."></textarea>';
   }
-  return '<div class="res-q" data-q="'+q.id+'"><label class="res-q-label">'+q.label+req+'</label>'+inner+
-    '<div class="res-miss" data-miss="'+q.id+'">Esta pergunta é obrigatória.</div></div>';
+  let html='<div class="res-q" data-q="'+q.id+'"><label class="res-q-label">'+q.label+req+'</label>'+inner+
+    '<div class="res-miss" data-miss="'+q.id+'">Esta pergunta é obrigatória.</div>';
+  if(q.follow){
+    const f=q.follow;
+    html+='<div class="res-follow" data-follow="'+q.id+'" style="display:none;margin-top:12px">'+
+      '<label class="res-q-label" style="font-size:13.5px;font-weight:500">'+f.label+(f.required?'<span class="req">*</span>':'')+'</label>'+
+      '<textarea class="res-text" data-qid="'+f.id+'" placeholder="Sua resposta..."></textarea>'+
+      '<div class="res-miss" data-miss="'+f.id+'">Esta pergunta é obrigatória.</div></div>';
+  }
+  return html+'</div>';
+}
+function resReadVal(root,q){
+  if(q.type==='single'){ const c=root.querySelector('input[name="'+q.id+'"]:checked'); return c?c.value:null; }
+  if(q.type==='multi'){ return [...root.querySelectorAll('input[name="'+q.id+'"]:checked')].map(c=>c.value); }
+  if(q.type==='scale'){ const sc=root.querySelector('.res-scale[data-qid="'+q.id+'"]'); return sc&&sc.dataset.value?Number(sc.dataset.value):null; }
+  const t=root.querySelector('textarea[data-qid="'+q.id+'"]'); const v=t?t.value.trim():''; return v===''?null:v;
+}
+function resFollowTriggered(q,val){
+  if(!q.follow) return false;
+  const w=q.follow.when;
+  if(w==='*') return Array.isArray(val) ? val.length>0 : (val!==null && val!==undefined && val!=='');
+  const arr=Array.isArray(w)?w:[w];
+  if(Array.isArray(val)) return val.some(v=>arr.indexOf(v)>=0);
+  return arr.indexOf(val)>=0;
+}
+function resEvalFollow(root,q){
+  if(!q.follow) return;
+  const div=root.querySelector('.res-follow[data-follow="'+q.id+'"]'); if(!div) return;
+  const on=resFollowTriggered(q,resReadVal(root,q));
+  div.style.display = on ? '' : 'none';
+  if(!on) resClearMiss(root,q.follow.id);
 }
 function resBindQuestions(root, questions){
+  const byId={}; questions.forEach(q=>byId[q.id]=q);
   root.querySelectorAll('.res-scale').forEach(sc=>{
     sc.querySelectorAll('.res-scale-btn').forEach(b=>{
       b.addEventListener('click',()=>{
@@ -4267,6 +4279,7 @@ function resBindQuestions(root, questions){
       inp.addEventListener('change',()=>{
         op.querySelectorAll('.res-opt').forEach(l=>l.classList.toggle('sel', l.querySelector('input').checked));
         resClearMiss(root, op.dataset.qid);
+        if(byId[op.dataset.qid]) resEvalFollow(root, byId[op.dataset.qid]);
       });
     });
   });
@@ -4275,6 +4288,7 @@ function resBindQuestions(root, questions){
   });
 }
 function resClearMiss(root, qid){ const el=root.querySelector('[data-miss="'+qid+'"]'); if(el) el.classList.remove('show'); }
+function resShowMiss(root, qid){ const el=root.querySelector('[data-miss="'+qid+'"]'); if(el) el.classList.add('show'); }
 function resCollect(root, questions){
   const answers={}; let missing=false;
   questions.forEach(q=>{
@@ -4284,16 +4298,21 @@ function resCollect(root, questions){
       val = sc && sc.dataset.value ? Number(sc.dataset.value) : null;
     } else if(q.type==='single'){
       const c=root.querySelector('input[name="'+q.id+'"]:checked'); val=c?c.value:null;
-      if(q.why){ const w=root.querySelector('textarea[data-why="'+q.id+'"]'); answers[q.id+'_why']=w?w.value.trim():''; }
     } else if(q.type==='multi'){
       const cs=[...root.querySelectorAll('input[name="'+q.id+'"]:checked')].map(c=>c.value); val=cs.length?cs:null;
     } else if(q.type==='text'){
       const t=root.querySelector('textarea[data-qid="'+q.id+'"]'); val=t?t.value.trim():''; if(val==='') val=null;
     }
-    if(val===null && !q.optional){
-      missing=true; const el=root.querySelector('[data-miss="'+q.id+'"]'); if(el) el.classList.add('show');
-    }
+    if(val===null && !q.optional){ missing=true; resShowMiss(root, q.id); }
     answers[q.id]= val===null ? (q.optional?'':null) : val;
+    // follow-up condicional
+    if(q.follow){
+      const triggered=resFollowTriggered(q,val);
+      const ft=root.querySelector('textarea[data-qid="'+q.follow.id+'"]');
+      const ftv=ft?ft.value.trim():'';
+      if(triggered && q.follow.required && ftv===''){ missing=true; resShowMiss(root, q.follow.id); }
+      answers[q.follow.id]= triggered ? ftv : '';
+    }
   });
   if(missing){ const f=root.querySelector('.res-miss.show'); if(f) f.scrollIntoView({block:'center',behavior:'smooth'}); }
   return {answers, missing};
@@ -4325,36 +4344,61 @@ document.addEventListener('click', function(e){
 /* log screen changes during research */
 (function(){ const _g=goScreen; goScreen=function(n){ _g(n); if(RES.active && RES.phase==='task') resLog('screen',{screen:n}); }; })();
 
-/* ---------- export ---------- */
-function resPayload(){
+/* ---------- modelo de dados (window.researchData) ---------- */
+function resBuildData(){
+  const participantProfile={}, preUnderstanding={};
+  RESEARCH.profile.forEach(q=>{
+    const tgt = q.group==='pre' ? preUnderstanding : participantProfile;
+    tgt[q.id]=RES.profile[q.id];
+    if(q.follow && RES.profile[q.follow.id]!==undefined) tgt[q.follow.id]=RES.profile[q.follow.id];
+  });
   return {
-    meta:{ startedAt:new Date(RES.t0).toISOString(),
-      finishedAt:RES.finishedAt?new Date(RES.finishedAt).toISOString():null,
-      durationMs:(RES.finishedAt||Date.now())-RES.t0, userAgent:navigator.userAgent },
-    profile:RES.profile, tasks:RES.results, final:RES.finalAnswers||{}, events:RES.events
+    sessionId:RES.sessionId,
+    participantProfile, preUnderstanding,
+    tasks:RES.results,
+    finalResponses:RES.finalAnswers||{},
+    startedAt:RES.t0?new Date(RES.t0).toISOString():null,
+    finishedAt:RES.finishedAt?new Date(RES.finishedAt).toISOString():null,
+    events:RES.events, userAgent:navigator.userAgent
   };
 }
-/* salva a sessão no localStorage (rede de segurança contra fechar a aba) */
+function resPayload(){ return resBuildData(); }
+/* salva a sessão no localStorage e expõe window.researchData (rede de segurança) */
 function resPersist(){
-  try{ localStorage.setItem(RES_LS_KEY, JSON.stringify(resPayload())); }catch(e){}
+  window.researchData = resBuildData();
+  try{ localStorage.setItem('rulesetResearchData', JSON.stringify(window.researchData)); }catch(e){}
 }
-/* achata o payload em uma única linha (chave→valor) para a planilha */
+/* achata em uma única linha (chave→valor) para a planilha */
 function resFlatten(){
-  const p=resPayload(), flat={};
-  flat.sessionId=RES.sessionId;
-  flat.startedAt=p.meta.startedAt; flat.finishedAt=p.meta.finishedAt;
-  flat.durationSec=Math.round(p.meta.durationMs/1000);
-  flat.userAgent=p.meta.userAgent;
-  Object.keys(p.profile||{}).forEach(k=>flat['profile.'+k]=fmt(p.profile[k]));
-  (p.tasks||[]).forEach(t=>{
-    flat[t.id+'.success']=t.success?'sim':'nao';
-    flat[t.id+'.timeSec']=Math.round(t.timeMs/1000);
-    Object.keys(t.answers||{}).forEach(k=>flat[t.id+'.'+k]=fmt(t.answers[k]));
+  const d=resBuildData(), flat={};
+  flat.sessionId=d.sessionId; flat.startedAt=d.startedAt; flat.finishedAt=d.finishedAt; flat.userAgent=d.userAgent;
+  Object.keys(d.participantProfile).forEach(k=>flat['profile.'+k]=fmt(d.participantProfile[k]));
+  Object.keys(d.preUnderstanding).forEach(k=>flat['pre.'+k]=fmt(d.preUnderstanding[k]));
+  (d.tasks||[]).forEach(t=>{
+    flat[t.taskId+'.status']=t.status;
+    flat[t.taskId+'.timeSec']=t.timeOnTaskSeconds;
+    flat[t.taskId+'.screen']=t.screenAtCompletion;
+    Object.keys(t.responses||{}).forEach(k=>flat[t.taskId+'.'+k]=fmt(t.responses[k]));
   });
-  Object.keys(p.final||{}).forEach(k=>flat['final.'+k]=fmt(p.final[k]));
-  flat._raw=JSON.stringify(p);
+  Object.keys(d.finalResponses||{}).forEach(k=>flat['final.'+k]=fmt(d.finalResponses[k]));
+  flat._raw=JSON.stringify(d);
   return flat;
-  function fmt(v){ return Array.isArray(v)?v.join(' | '):(v===null?'':v); }
+  function fmt(v){ return Array.isArray(v)?v.join(' | '):(v===null||v===undefined?'':v); }
+}
+/* gera CSV: uma linha por tarefa */
+function resCsv(){
+  const d=resBuildData(), p=d.participantProfile;
+  const cols=['participantRole','apiGovernanceFamiliarity','rulesFamiliarity','taskId','taskTitle','taskStatus','timeOnTaskSeconds','easeScore','understandingAnswer','confusionAnswer','specificAnswers'];
+  const esc=v=>{ v=(v===null||v===undefined)?'':(Array.isArray(v)?v.join(' | '):String(v)); return '"'+v.replace(/"/g,'""')+'"'; };
+  const lines=[cols.join(',')];
+  (d.tasks||[]).forEach(t=>{
+    const r=t.responses||{};
+    const specific={}; Object.keys(r).forEach(k=>{ if(['ease','understanding','confusion'].indexOf(k)<0) specific[k]=r[k]; });
+    lines.push([ esc(p.role), esc(p.familiarity), esc(p.rules_exp),
+      esc(t.taskId), esc(t.taskTitle), esc(t.status), esc(t.timeOnTaskSeconds),
+      esc(r.ease), esc(r.understanding), esc(r.confusion), esc(JSON.stringify(specific)) ].join(','));
+  });
+  return lines.join('\r\n');
 }
 /* envia para o Google Apps Script (text/plain evita preflight de CORS) */
 function resSubmitRemote(){
@@ -4364,7 +4408,7 @@ function resSubmitRemote(){
     method:'POST', mode:'no-cors',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body:JSON.stringify({ sessionId:RES.sessionId, flat:resFlatten(), payload:resPayload() })
-  }).then(()=>{ RES.submit='sent'; try{localStorage.removeItem(RES_LS_KEY);}catch(e){} resUpdateSubmitUI(); })
+  }).then(()=>{ RES.submit='sent'; try{localStorage.removeItem('rulesetResearchData');}catch(e){} resUpdateSubmitUI(); })
     .catch(()=>{ RES.submit='error'; resUpdateSubmitUI(); });
 }
 function resUpdateSubmitUI(){
@@ -4377,15 +4421,21 @@ function resUpdateSubmitUI(){
   const retry=document.getElementById('res-retry'); if(retry) retry.style.display = RES.submit==='error' ? '' : 'none';
 }
 
+function resDownload(content, mime, ext){
+  const blob=new Blob([content],{type:mime});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='research-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.'+ext;
+  a.click(); URL.revokeObjectURL(a.href);
+}
 function resExport(mode){
-  const json=JSON.stringify(resPayload(), null, 2);
   if(mode==='copy'){
-    navigator.clipboard.writeText(json).then(()=>{ const s=resModal().sec; const o=s.textContent; s.textContent='Copiado ✓'; setTimeout(()=>s.textContent=o,1500); });
+    navigator.clipboard.writeText(JSON.stringify(resBuildData(), null, 2)).then(()=>{
+      const s=resModal().sec; const o=s.textContent; s.textContent='Copiado ✓'; setTimeout(()=>s.textContent=o,1500);
+    });
+  } else if(mode==='csv'){
+    resDownload('﻿'+resCsv(), 'text/csv;charset=utf-8', 'csv');
   } else {
-    const blob=new Blob([json],{type:'application/json'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download='research-'+new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')+'.json';
-    a.click(); URL.revokeObjectURL(a.href);
+    resDownload(JSON.stringify(resBuildData(), null, 2), 'application/json', 'json');
   }
 }
 
@@ -4398,6 +4448,9 @@ function resExport(mode){
   window.addEventListener('mousemove',e=>{ if(!down)return; card.style.left=(ox+e.clientX-sx)+'px'; card.style.top=(oy+e.clientY-sy)+'px'; card.style.right='auto'; card.style.bottom='auto'; });
   window.addEventListener('mouseup',()=>{ down=false; head.style.cursor='grab'; });
 })();
+
+// inicia a pesquisa automaticamente ao carregar a página
+startResearch();
 </script>
 </body>
 </html>
