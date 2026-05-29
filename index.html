@@ -4055,7 +4055,6 @@ function startResearch(){
   RES.profile={}; RES.results=[]; RES.events=[]; RES.t0=Date.now();
   RES.sessionId = 's-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
   RES.submit='idle';
-  const fab=document.querySelector('.res-fab'); if(fab) fab.style.display='none';
   resLog('research_start',{}); resPersist();
   renderConsent();
 }
@@ -4063,7 +4062,6 @@ function resAbort(){
   RES.active=false; RES.phase=null;
   document.getElementById('res-overlay').classList.remove('open');
   document.getElementById('res-task').classList.remove('open');
-  const fab=document.querySelector('.res-fab'); if(fab) fab.style.display='';
 }
 
 /* ---------- modal helpers ---------- */
@@ -4098,7 +4096,7 @@ function renderProfile(){
   resBindQuestions(m.body, RESEARCH.profile);
   m.sec.textContent='Voltar'; m.sec.style.visibility='visible';
   m.prim.textContent='Continuar';
-  resSetProgress(8);
+  resSetProgress(12);
 }
 
 /* ---------- tasks ---------- */
@@ -4209,6 +4207,7 @@ function resPrimary(){
 }
 function resSecondary(){
   switch(RES.phase){
+    case 'profile': renderConsent(); break;
     case 'done': resExport('copy'); break;
   }
 }
