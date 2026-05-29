@@ -1519,7 +1519,7 @@ rules:
 .res-summary .no{color:#D70026;font-weight:700}
 </style>
 
-<button class="res-fab" onclick="startResearch()" title="Iniciar a pesquisa orientada a tarefas"><span class="spark">●</span> Iniciar pesquisa</button>
+<button class="res-fab" onclick="resFabClick()" title="Iniciar a pesquisa orientada a tarefas"><span class="spark">●</span> <span id="res-fab-label">Iniciar pesquisa</span></button>
 
 <div class="res-overlay" id="res-overlay">
   <div class="res-card">
@@ -4059,13 +4059,27 @@ function startResearch(){
   RES.profile={}; RES.results=[]; RES.events=[]; RES.t0=Date.now();
   RES.sessionId = 's-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
   RES.submit='idle';
+  resSetFabLabel(true);
   resLog('research_start',{}); resPersist();
   renderConsent();
+}
+// o FAB inicia a pesquisa; com a pesquisa já em andamento, recomeça (com confirmação, pois apaga as respostas)
+function resFabClick(){
+  if(RES.active){
+    if(confirm('Recomeçar a pesquisa? As respostas desta sessão serão apagadas.')) startResearch();
+  } else {
+    startResearch();
+  }
+}
+function resSetFabLabel(active){
+  const lbl=document.getElementById('res-fab-label'); if(lbl) lbl.textContent = active ? 'Recomeçar pesquisa' : 'Iniciar pesquisa';
+  const fab=document.querySelector('.res-fab'); if(fab) fab.title = active ? 'Recomeçar a pesquisa do início' : 'Iniciar a pesquisa orientada a tarefas';
 }
 function resAbort(){
   RES.active=false; RES.phase=null;
   document.getElementById('res-overlay').classList.remove('open');
   document.getElementById('res-task').classList.remove('open');
+  resSetFabLabel(false);
 }
 
 /* ---------- modal helpers ---------- */
