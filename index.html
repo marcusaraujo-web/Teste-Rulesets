@@ -3922,8 +3922,7 @@ const ENABLE_SMART_RECOMMENDATION_TASK = true;
 // perguntas-padrão exibidas DEPOIS de toda tarefa (sempre obrigatórias)
 const STANDARD_POST = [
   {id:'ease', type:'scale', label:'Quão fácil foi concluir esta tarefa?', min:'Muito difícil', max:'Muito fácil'},
-  {id:'understanding', type:'text', label:'O que você entendeu sobre esta etapa?'},
-  {id:'confusion', type:'text', label:'O que ficou confuso, difícil ou inseguro?'}
+  {id:'confusion', type:'text', optional:true, label:'Teve algo confuso ou difícil nesta etapa? Se sim, o quê?'}
 ];
 
 const RESEARCH = {
@@ -3953,7 +3952,7 @@ const RESEARCH = {
         {id:'t1_change', type:'text', label:'O que você entendeu que muda com o novo Maturity Score?'},
         {id:'t1_safe', type:'single', label:'Você se sentiria seguro para ativar essa mudança em um ambiente real?',
          options:['Sim','Talvez','Não'],
-         follow:{when:'*', id:'t1_safe_why', label:'Por quê?', required:true}}
+         follow:{when:['Talvez','Não'], id:'t1_safe_why', label:'Por quê?', required:true}}
       ]},
     { id:'task_2_managed_rulesets', title:'Rulesets da Sensedia',
       screen:'settings-rulesets',
@@ -4007,7 +4006,7 @@ const RESEARCH = {
       specific:[
         {id:'t6_enough', type:'single', label:'As informações foram suficientes para entender o problema?',
          options:['Sim','Parcialmente','Não'],
-         follow:{when:'*', id:'t6_enough_why', label:'Por quê?', required:true}},
+         follow:{when:['Parcialmente','Não'], id:'t6_enough_why', label:'Por quê?', required:true}},
         {id:'t6_helped', type:'multi', label:'O que mais ajudou você a localizar a violação?',
          options:['Severidade','Mensagem','Linha ou range','Path ou operação','Trecho do contrato','Card por pilar','Filtros','Outro'],
          follow:{when:['Outro'], id:'t6_helped_other', label:'Qual?', required:true}},
@@ -4023,7 +4022,7 @@ const RESEARCH = {
          options:['É aplicada automaticamente','Precisa ser revisada antes','Não sei']},
         {id:'t7_trust', type:'single', label:'Você confiaria nessa recomendação em um cenário real?',
          options:['Sim','Talvez','Não'],
-         follow:{when:'*', id:'t7_trust_why', label:'Por quê?', required:true}}
+         follow:{when:['Talvez','Não'], id:'t7_trust_why', label:'Por quê?', required:true}}
       ]}
   ],
   final: [
@@ -4033,7 +4032,7 @@ const RESEARCH = {
      options:['Entender o novo Maturity Score','Entender rulesets gerenciados','Criar um ruleset customizado','Criar ou editar regras','Entender impacto nas APIs','Analisar violações','Usar recomendação automática','Nenhuma']},
     {id:'f_hardest', type:'single', label:'Qual parte foi mais difícil?',
      options:['Entender o novo Maturity Score','Entender rulesets gerenciados','Criar um ruleset customizado','Criar ou editar regras','Entender impacto nas APIs','Analisar violações','Usar recomendação automática','Nenhuma']},
-    {id:'f_change', type:'text', label:'O que você mudaria para tornar essa experiência mais clara?'},
+    {id:'f_change', type:'text', optional:true, label:'O que você mudaria para tornar essa experiência mais clara?'},
     {id:'f_conf', type:'scale', label:'Quão confiante você se sentiria para criar um ruleset real depois desse teste?', min:'Nada confiante', max:'Muito confiante'},
     {id:'f_clear_impact', type:'scale', label:'Quão claro ficou o impacto de um ruleset nas APIs?', min:'Nada claro', max:'Muito claro'},
     {id:'f_clear_migration', type:'scale', label:'Quão claro ficou o que acontece ao migrar do modelo legado para o novo Maturity Score?', min:'Nada claro', max:'Muito claro'},
