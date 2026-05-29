@@ -1463,6 +1463,11 @@ rules:
 .res-btn--outline{background:var(--surface);border-color:var(--surface-bdr-strong);color:var(--purple-d)}
 .res-btn:disabled{opacity:.45;cursor:not-allowed}
 
+/* recap do cenário no topo do formulário pós-tarefa (somente leitura) */
+.res-recap{background:var(--bg-elevated);border:1px solid var(--surface-bdr);border-radius:10px;padding:12px 14px;margin-bottom:18px}
+.res-recap-tag{display:block;font-family:'Montserrat',monospace;font-size:11px;font-weight:700;letter-spacing:.4px;color:var(--purple);text-transform:uppercase;margin-bottom:4px}
+.res-recap p{margin:0;font-size:13px;color:var(--muted);line-height:1.5}
+
 /* perguntas */
 .res-q{margin:0 0 22px 0}
 .res-q-label{font-size:14px;font-weight:600;color:var(--text-strong);line-height:1.45;margin-bottom:10px;display:block}
@@ -1542,7 +1547,7 @@ rules:
   </div>
   <div class="res-task-foot">
     <button class="res-fail" onclick="finishTask(false)">Não consegui</button>
-    <button class="res-done" onclick="finishTask(true)">Concluí</button>
+    <button class="res-done" onclick="finishTask(true)">Concluí a tarefa</button>
   </div>
 </div>
 
@@ -4094,7 +4099,7 @@ function renderProfile(){
   m.body.innerHTML=RESEARCH.profile.map(q=>resQuestionHTML(q)).join('');
   resBindQuestions(m.body, RESEARCH.profile);
   m.sec.textContent='Voltar'; m.sec.style.visibility='visible';
-  m.prim.textContent='Continuar';
+  m.prim.textContent='Começar as tarefas';
   resSetProgress(12);
 }
 
@@ -4133,8 +4138,9 @@ function renderPostQuestions(){
   resOpenModal();
   const m=resModal();
   m.kicker.textContent=resTaskTag(RES.taskIdx)+' · pós-tarefa';
-  m.title.textContent='Resposta registrada';
-  m.body.innerHTML='<p class="lead" style="margin-bottom:18px">Responda as perguntas abaixo para seguir.</p>'+
+  m.title.textContent='Sobre esta tarefa';
+  m.body.innerHTML='<div class="res-recap"><span class="res-recap-tag">'+t.title+'</span><p>'+t.scenario+'</p></div>'+
+    '<p class="lead" style="margin-bottom:18px">Responda as perguntas abaixo para seguir.</p>'+
     RES._postQs.map(q=>resQuestionHTML(q)).join('');
   resBindQuestions(m.body, RES._postQs);
   m.sec.style.visibility='hidden';
@@ -4152,7 +4158,7 @@ function renderFinal(){
   m.body.innerHTML=RESEARCH.final.map(q=>resQuestionHTML(q)).join('');
   resBindQuestions(m.body, RESEARCH.final);
   m.sec.style.visibility='hidden';
-  m.prim.textContent='Finalizar';
+  m.prim.textContent='Enviar respostas';
   resSetProgress(94);
 }
 
