@@ -4099,7 +4099,7 @@ function renderConsent(){
   m.title.textContent=RESEARCH.consent.title;
   m.body.innerHTML='<p class="lead">'+RESEARCH.consent.text+'</p>'+
     '<p class="lead" style="margin-top:-4px">'+RESEARCH.consent.secondary+'</p>';
-  m.sec.style.visibility='hidden';
+  m.sec.textContent='Sair'; m.sec.style.visibility='visible';
   m.prim.textContent='Começar pesquisa';
   resSetProgress(4);
 }
@@ -4226,6 +4226,7 @@ function resPrimary(){
 }
 function resSecondary(){
   switch(RES.phase){
+    case 'consent': resAbort(); break;
     case 'profile': renderConsent(); break;
     case 'done': resExport('copy'); break;
   }
