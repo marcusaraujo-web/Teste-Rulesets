@@ -1511,7 +1511,16 @@ rules:
 .res-fail{background:var(--surface);border-color:var(--surface-bdr-strong);color:var(--muted)}
 .res-fail:hover{background:var(--bg-elevated)}
 
-/* resultados */
+/* resultados — estados (enviando, sucesso, erro) */
+.res-loader{display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 0 4px 0}
+.res-spinner{width:54px;height:54px;border-radius:50%;border:4px solid var(--bg-elevated);border-top-color:var(--purple);animation:resSpin .8s linear infinite}
+@keyframes resSpin{to{transform:rotate(360deg)}}
+.res-icon{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:18px auto 8px auto;font-size:36px;font-weight:700;line-height:1}
+.res-icon--ok{background:#E3F5EC;color:#107B3B}
+.res-icon--err{background:#FBE6E9;color:#D70026}
+.res-result-msg{text-align:center;margin:14px 0 0 0;font-size:15px;line-height:1.55;color:var(--text-strong)}
+.res-result-sub{text-align:center;margin:8px 0 0 0;font-size:13.5px;color:var(--muted);line-height:1.5}
+
 .res-summary{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
 .res-summary th,.res-summary td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--surface-bdr)}
 .res-summary th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--faint);font-weight:700}
@@ -4185,13 +4194,10 @@ function renderFinal(){
 function renderResults(){
   RES.phase='done'; resOpenModal();
   const m=resModal();
-  m.kicker.textContent='Concluído';
-  m.title.textContent='Pesquisa finalizada';
-  m.body.innerHTML=
-    '<p class="lead">Obrigado por participar. Suas respostas ajudam a melhorar a experiência do produto.</p>'+
-    '<p id="res-submit-status" style="font-size:14px;min-height:22px;margin:6px 0 0 0;line-height:1.5"></p>';
   m.prim.style.visibility='hidden';
   m.sec.style.visibility='hidden';
+  // já mostra estado "enviando" para o participante ter feedback imediato
+  if(RES.submit==='idle') RES.submit='sending';
   resSetProgress(100);
   resUpdateSubmitUI();
 }
@@ -4413,27 +4419,68 @@ function resCsv(){
   });
   return lines.join('\r\n');
 }
-/* envia para o Google Apps Script (text/plain evita preflight de CORS) */
+/* envia para o Google Apps Script.
+   - mode:'no-cors' impede ler a resposta, então não vale esperar por ela.
+   - keepalive:true garante que o POST sobreviva ao fechamento da aba.
+   - Disparamos e marcamos como enviado imediatamente (feedback <1s) — o Apps Script processa em background. */
 function resSubmitRemote(){
   if(!RESEARCH_ENDPOINT){ RES.submit='skip'; resUpdateSubmitUI(); return; }
-  RES.submit='sending'; resUpdateSubmitUI();
-  fetch(RESEARCH_ENDPOINT, {
-    method:'POST', mode:'no-cors',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({ sessionId:RES.sessionId, flat:resFlatten(), payload:resPayload() })
-  }).then(()=>{ RES.submit='sent'; try{localStorage.removeItem('rulesetResearchData');}catch(e){} resUpdateSubmitUI(); })
-    .catch(()=>{ RES.submit='error'; resUpdateSubmitUI(); });
+  // payload enxuto para caber no limite de 64KB do keepalive
+  const data = resBuildData();
+  data.events = (data.events||[]).slice(-50);
+  const flat = resFlatten();
+  flat._raw = JSON.stringify(data);
+  const body = JSON.stringify({ sessionId:RES.sessionId, flat, payload:data });
+  try {
+    fetch(RESEARCH_ENDPOINT, {
+      method:'POST', mode:'no-cors', keepalive:true,
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body
+    }).catch(()=>{ /* no-cors: erros aqui não são confiáveis, ignorados */ });
+    RES.submit='sent';
+    try{localStorage.removeItem('rulesetResearchData');}catch(e){}
+  } catch(e) {
+    // erro síncrono ao iniciar o fetch (ex.: payload acima do limite de keepalive)
+    RES.submit='error';
+  }
+  resUpdateSubmitUI();
 }
 function resUpdateSubmitUI(){
-  const el=document.getElementById('res-submit-status'); if(!el) return;
-  const map={
-    idle:'',
-    skip:'',
-    sending:'<span style="color:var(--muted)">Enviando suas respostas…</span>',
-    sent:'<b style="color:#107B3B">✓ Respostas enviadas.</b>',
-    error:'<span style="color:#D70026">Tivemos um problema ao enviar suas respostas. Por favor, avise quem está conduzindo a pesquisa.</span>'
+  if(RES.phase!=='done') return;
+  const m=resModal();
+  const STATES={
+    sending:{
+      kicker:'Quase lá',
+      title:'Enviando suas respostas',
+      body:'<div class="res-loader"><div class="res-spinner" role="status" aria-label="Enviando"></div></div>'+
+        '<p class="res-result-msg">Isso pode levar até 30 segundos.</p>'+
+        '<p class="res-result-sub"><b>Não feche esta janela</b> até a confirmação aparecer.</p>'
+    },
+    sent:{
+      kicker:'Concluído',
+      title:'Pesquisa finalizada',
+      body:'<div class="res-icon res-icon--ok" aria-hidden="true">✓</div>'+
+        '<p class="res-result-msg">Obrigado por participar!<br>Suas respostas ajudam a melhorar a experiência do produto.</p>'+
+        '<p class="res-result-sub" style="color:#107B3B;font-weight:600;margin-top:14px">Respostas enviadas com sucesso.</p>'
+    },
+    skip:{
+      kicker:'Concluído',
+      title:'Pesquisa finalizada',
+      body:'<div class="res-icon res-icon--ok" aria-hidden="true">✓</div>'+
+        '<p class="res-result-msg">Obrigado por participar!<br>Suas respostas ajudam a melhorar a experiência do produto.</p>'
+    },
+    error:{
+      kicker:'Algo deu errado',
+      title:'Não conseguimos enviar suas respostas',
+      body:'<div class="res-icon res-icon--err" aria-hidden="true">!</div>'+
+        '<p class="res-result-msg">Tivemos um problema ao enviar suas respostas.</p>'+
+        '<p class="res-result-sub">Por favor, avise quem está conduzindo a pesquisa.</p>'
+    }
   };
-  el.innerHTML=map[RES.submit]||'';
+  const s = STATES[RES.submit] || STATES.sending;
+  m.kicker.textContent = s.kicker;
+  m.title.textContent = s.title;
+  m.body.innerHTML = s.body;
 }
 
 function resDownload(content, mime, ext){
