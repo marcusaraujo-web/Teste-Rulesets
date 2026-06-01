@@ -4048,8 +4048,8 @@ const RESEARCH = {
 // tarefas ativas no fluxo (respeita o toggle da Tarefa 7)
 const ACTIVE_TASKS = RESEARCH.tasks.filter(t => !t.optionalTask || ENABLE_SMART_RECOMMENDATION_TASK);
 
-// >>> COLE AQUI a URL do Web App do Google Apps Script (deploy "Anyone"). Vazio = só export manual/local.
-const RESEARCH_ENDPOINT = '';
+// >>> URL do Web App do Google Apps Script (deploy "Anyone"). Vazio = só export manual/local.
+const RESEARCH_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzDMjbumj7f8tY_Eaub-77iD0UqMtKATKXusxzz79GCjHZ0DmqO28sd7cqgILxkpEh4/exec';
 
 const RES = { active:false, phase:null, taskIdx:0, introIdx:0, profile:{}, results:[], events:[], t0:0, taskT0:0, sessionId:null, submit:'idle' };
 
