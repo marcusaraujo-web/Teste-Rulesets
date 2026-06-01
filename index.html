@@ -4088,7 +4088,12 @@ function resModal(){ return {
   title:document.getElementById('res-modal-title'), body:document.getElementById('res-body'),
   prim:document.getElementById('res-primary'), sec:document.getElementById('res-secondary'),
   bar:document.getElementById('res-progress-bar') }; }
-function resOpenModal(){ resModal().ov.classList.add('open'); document.getElementById('res-task').classList.remove('open'); }
+function resOpenModal(){
+  resModal().ov.classList.add('open');
+  document.getElementById('res-task').classList.remove('open');
+  document.getElementById('res-primary').style.visibility='visible';
+  document.getElementById('res-secondary').style.visibility='visible';
+}
 function resSetProgress(pct){ resModal().bar.style.width = Math.max(0,Math.min(100,pct)) + '%'; }
 
 /* ---------- consent ---------- */
@@ -4182,20 +4187,20 @@ function renderResults(){
   const m=resModal();
   m.kicker.textContent='Concluído';
   m.title.textContent='Pesquisa finalizada';
-  const rows=RES.results.map((r,i)=>{
-    const ease=(r.responses&&r.responses.ease)?r.responses.ease:'—';
-    const st=r.status==='completed'?'<span class="ok">Concluiu</span>':'<span class="no">Não concluiu</span>';
-    return '<tr><td>'+r.taskTitle+'</td><td>'+st+'</td><td>'+r.timeOnTaskSeconds+'s</td><td>'+ease+'</td></tr>';
-  }).join('');
-  m.body.innerHTML='<p class="lead">Obrigado por participar. Suas respostas ajudam a melhorar a experiência do produto.</p>'+
-    '<p id="res-submit-status" style="font-size:13px;color:var(--muted);min-height:18px;margin:0 0 14px 0"></p>'+
-    '<table class="res-summary"><thead><tr><th>Tarefa</th><th>Status</th><th>Tempo</th><th>Facilidade</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+
-      '<button class="res-btn res-btn--outline" onclick="resExport(\'csv\')">Baixar CSV</button>'+
-      '<button class="res-btn res-btn--outline" id="res-retry" style="display:none" onclick="resSubmitRemote()">Reenviar para a planilha</button>'+
+  m.body.innerHTML=
+    '<p class="lead">Obrigado por participar. Suas respostas ajudam a melhorar a experiência do produto.</p>'+
+    '<p id="res-submit-status" style="font-size:14px;min-height:22px;margin:6px 0 0 0"></p>'+
+    '<div id="res-fallback" style="display:none;margin-top:18px;padding:14px;border:1px solid var(--surface-bdr);border-radius:10px;background:var(--bg-elevated)">'+
+      '<p style="font-size:13px;color:var(--text-strong);margin:0 0 10px 0;line-height:1.5">Não conseguimos enviar suas respostas automaticamente. Por segurança, <b>baixe o arquivo abaixo</b> e envie para a pessoa que está conduzindo a pesquisa.</p>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="res-btn res-btn--primary" onclick="resExport(\'json\')">Baixar JSON</button>'+
+        '<button class="res-btn res-btn--outline" onclick="resExport(\'csv\')">Baixar CSV</button>'+
+        '<button class="res-btn res-btn--ghost" onclick="resExport(\'copy\')">Copiar JSON</button>'+
+        '<button class="res-btn res-btn--outline" id="res-retry" onclick="resSubmitRemote()">Tentar reenviar</button>'+
+      '</div>'+
     '</div>';
-  m.sec.textContent='Copiar JSON'; m.sec.style.visibility='visible';
-  m.prim.textContent='Baixar JSON';
+  m.prim.style.visibility='hidden';
+  m.sec.style.visibility='hidden';
   resSetProgress(100);
   resUpdateSubmitUI();
 }
@@ -4430,12 +4435,15 @@ function resSubmitRemote(){
 }
 function resUpdateSubmitUI(){
   const el=document.getElementById('res-submit-status'); if(!el) return;
-  const map={ idle:'', skip:'<b>Envio remoto desativado.</b> Use os botões abaixo para exportar manualmente.',
-    sending:'Enviando respostas para a planilha…',
-    sent:'<b style="color:#107B3B">✓ Respostas enviadas para a planilha.</b>',
-    error:'<b style="color:#D70026">Falha ao enviar.</b> Os dados estão salvos neste navegador — exporte abaixo e tente reenviar.' };
+  const map={
+    idle:'',
+    skip:'',
+    sending:'<span style="color:var(--muted)">Enviando suas respostas…</span>',
+    sent:'<b style="color:#107B3B">✓ Respostas enviadas.</b>',
+    error:''
+  };
   el.innerHTML=map[RES.submit]||'';
-  const retry=document.getElementById('res-retry'); if(retry) retry.style.display = RES.submit==='error' ? '' : 'none';
+  const fb=document.getElementById('res-fallback'); if(fb) fb.style.display = (RES.submit==='error' || RES.submit==='skip') ? '' : 'none';
 }
 
 function resDownload(content, mime, ext){
