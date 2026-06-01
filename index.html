@@ -4066,6 +4066,7 @@ function startResearch(){
   if(typeof endTour==='function') endTour();
   RES.active=true; RES.phase='consent'; RES.taskIdx=0; RES.introIdx=0;
   RES.profile={}; RES.results=[]; RES.events=[]; RES.t0=Date.now();
+  RES._pendingTask=null; RES._postQs=null;
   RES.sessionId = 's-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);
   RES.submit='idle';
   resSetFabLabel(true);
@@ -4148,16 +4149,61 @@ function startTask(i){
 }
 function finishTask(success){
   const t=ACTIVE_TASKS[RES.taskIdx], now=Date.now();
+  const prev = (RES._pendingTask && RES._pendingTask.taskId===t.id) ? RES._pendingTask : null;
   RES._pendingTask={
     taskId:t.id, taskTitle:t.title,
     status: success?'completed':'failed',
-    startedAt:new Date(RES.taskT0).toISOString(),
-    finishedAt:new Date(now).toISOString(),
-    timeOnTaskSeconds:Math.round((now-RES.taskT0)/1000),
-    screenAtCompletion:resActiveScreen()
+    startedAt: prev ? prev.startedAt : new Date(RES.taskT0).toISOString(),
+    finishedAt: new Date(now).toISOString(),
+    timeOnTaskSeconds: Math.round((now-RES.taskT0)/1000),
+    screenAtCompletion: resActiveScreen(),
+    revisited: !!prev,
+    partialAnswers: prev ? prev.partialAnswers : undefined
   };
-  resLog('task_'+(success?'completed':'failed'),{id:t.id, timeOnTaskSeconds:RES._pendingTask.timeOnTaskSeconds});
+  resLog('task_'+(success?'completed':'failed'),{id:t.id, timeOnTaskSeconds:RES._pendingTask.timeOnTaskSeconds, revisited:!!prev});
   renderPostQuestions();
+}
+/* fecha o formulário pós-tarefa e reabre o card da tarefa, preservando respostas parciais */
+function resBackToTask(){
+  if(!RES._pendingTask || RES.phase!=='postq') return;
+  const m=resModal();
+  RES._pendingTask.partialAnswers = resCollectPartial(m.body, RES._postQs);
+  document.getElementById('res-overlay').classList.remove('open');
+  document.getElementById('res-task').classList.add('open');
+  RES.phase='task';
+  resLog('task_revisit',{id:RES._pendingTask.taskId});
+}
+/* coleta respostas SEM validação (para preservar trabalho parcial) */
+function resCollectPartial(root, questions){
+  const ans={};
+  questions.forEach(q=>{
+    let val=null;
+    if(q.type==='scale'){ const sc=root.querySelector('.res-scale[data-qid="'+q.id+'"]'); val=sc&&sc.dataset.value?Number(sc.dataset.value):null; }
+    else if(q.type==='single'){ const c=root.querySelector('input[name="'+q.id+'"]:checked'); val=c?c.value:null; }
+    else if(q.type==='multi'){ const cs=[...root.querySelectorAll('input[name="'+q.id+'"]:checked')].map(c=>c.value); val=cs.length?cs:null; }
+    else if(q.type==='text'){ const t=root.querySelector('textarea[data-qid="'+q.id+'"]'); const v=t?t.value.trim():''; val=v===''?null:v; }
+    if(val!==null) ans[q.id]=val;
+    if(q.follow){
+      const ft=root.querySelector('textarea[data-qid="'+q.follow.id+'"]');
+      const fv=ft?ft.value.trim():''; if(fv!=='') ans[q.follow.id]=fv;
+    }
+  });
+  return ans;
+}
+/* devolve respostas parciais aos inputs ao reabrir o formulário */
+function resRestorePartial(root, questions, ans){
+  questions.forEach(q=>{
+    const v=ans[q.id];
+    if(v!==undefined && v!==null){
+      if(q.type==='scale'){ const btn=root.querySelector('.res-scale[data-qid="'+q.id+'"] [data-val="'+v+'"]'); if(btn) btn.click(); }
+      else if(q.type==='single'){ const inp=root.querySelector('input[name="'+q.id+'"][value="'+String(v).replace(/"/g,'\\"')+'"]'); if(inp){ inp.checked=true; inp.dispatchEvent(new Event('change',{bubbles:true})); } }
+      else if(q.type==='multi'){ (Array.isArray(v)?v:[v]).forEach(vv=>{ const inp=root.querySelector('input[name="'+q.id+'"][value="'+String(vv).replace(/"/g,'\\"')+'"]'); if(inp){ inp.checked=true; inp.dispatchEvent(new Event('change',{bubbles:true})); } }); }
+      else if(q.type==='text'){ const ta=root.querySelector('textarea[data-qid="'+q.id+'"]'); if(ta) ta.value=v; }
+    }
+    if(q.follow && ans[q.follow.id]){
+      const ta=root.querySelector('textarea[data-qid="'+q.follow.id+'"]'); if(ta) ta.value=ans[q.follow.id];
+    }
+  });
 }
 function renderPostQuestions(){
   RES.phase='postq';
@@ -4171,7 +4217,11 @@ function renderPostQuestions(){
     '<p class="lead" style="margin-bottom:18px">Responda as perguntas abaixo para seguir.</p>'+
     RES._postQs.map(q=>resQuestionHTML(q)).join('');
   resBindQuestions(m.body, RES._postQs);
-  m.sec.style.visibility='hidden';
+  // restaura respostas parciais se o participante voltou à tarefa e abriu o formulário de novo
+  if(RES._pendingTask && RES._pendingTask.partialAnswers){
+    resRestorePartial(m.body, RES._postQs, RES._pendingTask.partialAnswers);
+  }
+  m.sec.textContent='Voltar à tarefa'; m.sec.style.visibility='visible';
   const last = RES.taskIdx===ACTIVE_TASKS.length-1;
   m.prim.textContent= last ? 'Ir para as perguntas finais' : 'Ir para a próxima tarefa';
   resSetProgress(18 + (RES.taskIdx+1)/ACTIVE_TASKS.length*68);
@@ -4230,7 +4280,7 @@ function resSecondary(){
   switch(RES.phase){
     case 'consent': resAbort(); break;
     case 'profile': renderConsent(); break;
-    case 'done': resExport('copy'); break;
+    case 'postq': resBackToTask(); break;
   }
 }
 
