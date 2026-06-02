@@ -1496,6 +1496,10 @@ rules:
 .res-task.open{display:flex}
 .res-task-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;background:#1A1A22;color:#fff;cursor:grab;user-select:none}
 .res-task-head .tag{font-family:'Montserrat',monospace;font-size:11px;font-weight:700;letter-spacing:.5px;color:#F8C58A}
+.res-task-toggle{background:transparent;border:1px solid rgba(248,197,138,.4);color:#F8C58A;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;line-height:1;padding:3px 9px;border-radius:6px;transition:background .15s}
+.res-task-toggle:hover{background:rgba(255,255,255,.08)}
+.res-task--mini{width:auto}
+.res-task--mini .res-task-body,.res-task--mini .res-task-foot{display:none}
 .res-task-head .opt{font-size:10px;font-weight:700;color:#1A1A22;background:#F8C58A;border-radius:5px;padding:1px 6px;margin-left:6px}
 .res-task-body{padding:16px}
 .res-task-body .instr{font-size:14.5px;color:var(--text-strong);line-height:1.55;margin:0}
@@ -1550,6 +1554,7 @@ rules:
 <div class="res-task" id="res-task">
   <div class="res-task-head" id="res-task-head">
     <span><span class="tag" id="res-task-tag"></span></span>
+    <button type="button" class="res-task-toggle" id="res-task-toggle" onclick="resTaskToggleMini(event)" onmousedown="event.stopPropagation()" aria-label="Minimizar tarefa" title="Minimizar"><span id="res-task-toggle-icon">−</span></button>
   </div>
   <div class="res-task-body">
     <p class="instr" id="res-task-instr"></p>
@@ -4551,6 +4556,15 @@ function resExport(mode){
   }
 }
 
+/* minimiza/expande o card da tarefa */
+function resTaskToggleMini(e){
+  if(e) e.stopPropagation();
+  const card=document.getElementById('res-task');
+  const mini=card.classList.toggle('res-task--mini');
+  const ico=document.getElementById('res-task-toggle-icon'); if(ico) ico.textContent = mini ? '+' : '−';
+  const btn=document.getElementById('res-task-toggle');
+  if(btn){ btn.setAttribute('aria-label', mini ? 'Expandir tarefa' : 'Minimizar tarefa'); btn.setAttribute('title', mini ? 'Expandir' : 'Minimizar'); }
+}
 /* card de tarefa arrastável */
 (function initResTaskDrag(){
   const card=document.getElementById('res-task'), head=document.getElementById('res-task-head');
